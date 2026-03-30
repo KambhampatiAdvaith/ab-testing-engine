@@ -1,6 +1,11 @@
 import numpy as np
 from math import lgamma
 
+# Named constants for numerical stability and approximation parameters
+_INTEGRATION_STEPS = 1000       # Number of steps for numerical t-dist CDF integration
+_INTEGRATION_EPSILON = 1e-10    # Guard value to avoid log(0) at integration bounds
+_COEF_EPSILON = 1e-300          # Prevent division by zero in t-statistic computation
+
 
 def _normal_cdf(x: float) -> float:
     """Standard normal CDF via Abramowitz & Stegun error function approximation."""
@@ -35,8 +40,8 @@ def _t_cdf_approx(t: float, df: int) -> float:
     x = df / (df + t ** 2)
     a, b = df / 2.0, 0.5
 
-    n_steps = 1000
-    ts = np.linspace(1e-10, x - 1e-10, n_steps)
+    n_steps = _INTEGRATION_STEPS
+    ts = np.linspace(_INTEGRATION_EPSILON, x - _INTEGRATION_EPSILON, n_steps)
     log_integrand = (a - 1) * np.log(ts) + (b - 1) * np.log(1 - ts)
     log_beta_val = lgamma(a) + lgamma(b) - lgamma(a + b)
     integrand = np.exp(log_integrand - log_beta_val)
@@ -78,7 +83,7 @@ def t_test_coefficients(model) -> dict:
     var_coefs = np.diag(XtX_inv) * mse
     std_errors = np.sqrt(np.maximum(var_coefs, 0))
 
-    t_stats = model.coefficients_ / (std_errors + 1e-300)
+    t_stats = model.coefficients_ / (std_errors + _COEF_EPSILON)
 
     p_values = np.array([
         2.0 * (1.0 - _t_cdf_approx(abs(float(t)), df))

@@ -55,7 +55,7 @@ def test_residuals():
 
     resid = model.residuals()
     assert len(resid) == 100
-    assert abs(resid.sum()) < 1e-6
+    assert np.allclose(resid.sum(), 0.0, atol=1e-10)
 
 
 def test_t_test_coefficients():

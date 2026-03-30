@@ -1,6 +1,10 @@
 import numpy as np
 import os
 
+# Named constants for binary search used in z/power critical value lookups
+_Z_SEARCH_UPPER_BOUND = 10.0    # Upper bound for z-value binary search
+_BINARY_SEARCH_ITERATIONS = 100  # Number of binary search iterations for convergence
+
 
 def _erf(z: float) -> float:
     """Abramowitz and Stegun approximation of erf, max error 1.5e-7."""
@@ -51,8 +55,8 @@ class ABTestEngine:
             z critical value
         """
         target = 1 - alpha / 2
-        lo, hi = 0.0, 10.0
-        for _ in range(100):
+        lo, hi = 0.0, _Z_SEARCH_UPPER_BOUND
+        for _ in range(_BINARY_SEARCH_ITERATIONS):
             mid = (lo + hi) / 2
             if self._normal_cdf(mid) < target:
                 lo = mid
@@ -156,8 +160,8 @@ class ABTestEngine:
         z_alpha = self._z_critical(alpha)
 
         # Find z_beta: CDF(z_beta) = power
-        lo, hi = 0.0, 10.0
-        for _ in range(100):
+        lo, hi = 0.0, _Z_SEARCH_UPPER_BOUND
+        for _ in range(_BINARY_SEARCH_ITERATIONS):
             mid = (lo + hi) / 2
             if self._normal_cdf(mid) < power:
                 lo = mid
