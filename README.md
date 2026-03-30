@@ -30,6 +30,24 @@ This engine provides a full pipeline for data-driven experimentation and user se
 pip install -r requirements.txt
 ```
 
+## 🌐 Web Dashboard
+
+An interactive Streamlit dashboard is included on top of the backend engine.
+
+```bash
+pip install -r requirements.txt
+streamlit run streamlit_app.py
+```
+
+The app opens at `http://localhost:8501` with four interactive pages:
+
+| Page | Description |
+|------|-------------|
+| 📊 CLT Visualizer | Central Limit Theorem demo & traffic simulator |
+| 🧪 A/B Test Lab | Frequentist Z-test, Bayesian estimation, live posterior animation |
+| 📈 LTV Predictor | Regression training, diagnostics, and LTV prediction form |
+| 🎯 User Personas | K-Means clustering, elbow method, persona cards & radar charts |
+
 ## Usage
 
 ```bash
