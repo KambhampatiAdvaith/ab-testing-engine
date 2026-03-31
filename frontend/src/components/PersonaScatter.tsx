@@ -8,61 +8,57 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import { discoverPersonas } from "../api";
+import { discoverPersonas } from "../api/client";
+import type { PersonaResponse, UserRecord } from "../types";
+import type { AxiosError } from "axios";
 
 const CLUSTER_COLORS = [
-  "#6366f1",
-  "#10b981",
-  "#f59e0b",
-  "#ef4444",
-  "#818cf8",
-  "#34d399",
-  "#fbbf24",
-  "#f87171",
+  "#6366f1", "#10b981", "#f59e0b", "#ef4444",
+  "#818cf8", "#34d399", "#fbbf24", "#f87171",
 ];
+
+function getErrorMessage(err: unknown): string {
+  const axiosErr = err as AxiosError<{ detail: string }>;
+  return axiosErr.response?.data?.detail ?? (err instanceof Error ? err.message : String(err));
+}
+
+interface ScatterPoint {
+  x: number;
+  y: number;
+}
 
 export default function PersonaScatter() {
   const [form, setForm] = useState({ n_users: 200, k: 4 });
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState<PersonaResponse | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
     try {
-      const res = await discoverPersonas({
-        n_users: Number(form.n_users),
-        k: Number(form.k),
-      });
-      setResult(res);
+      setResult(await discoverPersonas({ n_users: Number(form.n_users), k: Number(form.k) }));
     } catch (err) {
-      setError(err.response?.data?.detail || err.message);
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
   };
 
-  // Build per-cluster data arrays for ScatterChart
-  const clusters = {};
+  const clusters: Record<string, ScatterPoint[]> = {};
   if (result?.users) {
     for (const u of result.users) {
-      const c = u.cluster ?? 0;
+      const c = String((u as UserRecord).cluster ?? 0);
       if (!clusters[c]) clusters[c] = [];
       clusters[c].push({
-        x: u.avg_session_duration ?? 0,
-        y: u.pages_per_session ?? 0,
-        name: `User`,
+        x: Number((u as UserRecord).avg_session_duration ?? 0),
+        y: Number((u as UserRecord).pages_per_session ?? 0),
       });
     }
   }
+  const clusterKeys = Object.keys(clusters).sort((a, b) => Number(a) - Number(b));
 
-  const clusterKeys = Object.keys(clusters).sort(
-    (a, b) => Number(a) - Number(b)
-  );
-
-  // Convert personas dict to list for table rendering
   const personaList = result?.personas
     ? Object.entries(result.personas).map(([id, p]) => ({ id, ...p }))
     : [];
@@ -78,9 +74,7 @@ export default function PersonaScatter() {
             <input
               type="number"
               value={form.n_users}
-              onChange={(e) =>
-                setForm((s) => ({ ...s, n_users: e.target.value }))
-              }
+              onChange={(e) => setForm((s) => ({ ...s, n_users: Number(e.target.value) }))}
               className="mt-1 block w-36 rounded-md bg-surface-900 border border-surface-700 px-3 py-1.5 text-sm text-surface-300 focus:outline-none focus:border-accent-500"
             />
           </label>
@@ -90,9 +84,7 @@ export default function PersonaScatter() {
             <input
               type="number"
               value={form.k}
-              onChange={(e) =>
-                setForm((s) => ({ ...s, k: e.target.value }))
-              }
+              onChange={(e) => setForm((s) => ({ ...s, k: Number(e.target.value) }))}
               className="mt-1 block w-28 rounded-md bg-surface-900 border border-surface-700 px-3 py-1.5 text-sm text-surface-300 focus:outline-none focus:border-accent-500"
             />
           </label>
@@ -109,18 +101,22 @@ export default function PersonaScatter() {
         {error && <p className="mt-3 text-sm text-danger-400">{error}</p>}
       </section>
 
+      {loading && !result && (
+        <section className="bg-surface-800 rounded-lg border border-surface-700 p-5">
+          <div className="h-80 bg-surface-700 rounded animate-pulse" />
+        </section>
+      )}
+
       {result && clusterKeys.length > 0 && (
         <section className="bg-surface-800 rounded-lg border border-surface-700 p-5 space-y-4">
-          <h3 className="text-sm font-medium text-surface-300">
-            Cluster Scatter Plot
-          </h3>
+          <h3 className="text-sm font-medium text-surface-300">Cluster Scatter Plot</h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <ScatterChart>
                 <XAxis
                   type="number"
                   dataKey="x"
-                  name="Feature 1"
+                  name="Avg Session Duration"
                   tick={{ fill: "#94a3b8", fontSize: 12 }}
                   axisLine={{ stroke: "#334155" }}
                   tickLine={false}
@@ -128,7 +124,7 @@ export default function PersonaScatter() {
                 <YAxis
                   type="number"
                   dataKey="y"
-                  name="Feature 2"
+                  name="Pages per Session"
                   tick={{ fill: "#94a3b8", fontSize: 12 }}
                   axisLine={{ stroke: "#334155" }}
                   tickLine={false}
@@ -142,9 +138,7 @@ export default function PersonaScatter() {
                   }}
                   cursor={{ strokeDasharray: "3 3", stroke: "#475569" }}
                 />
-                <Legend
-                  wrapperStyle={{ color: "#94a3b8", fontSize: 12 }}
-                />
+                <Legend wrapperStyle={{ color: "#94a3b8", fontSize: 12 }} />
                 {clusterKeys.map((key, i) => (
                   <Scatter
                     key={key}
@@ -161,9 +155,7 @@ export default function PersonaScatter() {
 
       {personaList.length > 0 && (
         <section className="bg-surface-800 rounded-lg border border-surface-700 p-5">
-          <h3 className="text-sm font-medium text-surface-300 mb-3">
-            Persona Analysis
-          </h3>
+          <h3 className="text-sm font-medium text-surface-300 mb-3">Persona Analysis</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -176,27 +168,15 @@ export default function PersonaScatter() {
               <tbody>
                 {personaList.map((p) => (
                   <tr key={p.id} className="border-b border-surface-700/50">
-                    <td className="py-2 pr-4 font-mono text-accent-300">
-                      Cluster {p.id}
-                    </td>
-                    <td className="py-2 pr-4 font-mono text-surface-300">
-                      {p.size ?? "—"}
-                    </td>
-                    <td className="py-2 font-mono text-surface-300">
-                      {p.label ?? "—"}
-                    </td>
+                    <td className="py-2 pr-4 font-mono text-accent-300">Cluster {p.id}</td>
+                    <td className="py-2 pr-4 font-mono text-surface-300">{p.size ?? "—"}</td>
+                    <td className="py-2 font-mono text-surface-300">{p.label ?? "—"}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         </section>
-      )}
-
-      {result && clusterKeys.length === 0 && personaList.length === 0 && (
-        <p className="text-sm text-surface-500">
-          No cluster data returned. Check backend response format.
-        </p>
       )}
     </div>
   );

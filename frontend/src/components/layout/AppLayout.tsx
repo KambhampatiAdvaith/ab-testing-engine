@@ -1,21 +1,24 @@
-import { useState } from "react";
-import ABTestPanel from "./components/ABTestPanel";
-import CLTVisualizer from "./components/CLTVisualizer";
-import PersonaScatter from "./components/PersonaScatter";
-import ExperimentList from "./components/ExperimentList";
+import type { ReactNode } from "react";
+import { useAppStore } from "../../store/useAppStore";
 
-const NAV = [
+type Page = "ab" | "clt" | "personas" | "experiments";
+
+const NAV: { key: Page; label: string; icon: string }[] = [
   { key: "ab", label: "A/B Testing", icon: "⚗️" },
   { key: "clt", label: "CLT Visualizer", icon: "📊" },
   { key: "personas", label: "User Personas", icon: "👥" },
   { key: "experiments", label: "Experiments", icon: "🧪" },
 ];
 
-export default function App() {
-  const [page, setPage] = useState("ab");
+interface AppLayoutProps {
+  children: ReactNode;
+}
+
+export default function AppLayout({ children }: AppLayoutProps) {
+  const { activePage, setActivePage } = useAppStore();
 
   return (
-    <>
+    <div className="flex h-screen bg-surface-900 text-surface-300 overflow-hidden">
       {/* Sidebar */}
       <nav className="w-56 shrink-0 bg-surface-800 border-r border-surface-700 flex flex-col">
         <div className="px-4 py-5 border-b border-surface-700">
@@ -27,9 +30,9 @@ export default function App() {
           {NAV.map((n) => (
             <li key={n.key}>
               <button
-                onClick={() => setPage(n.key)}
+                onClick={() => setActivePage(n.key)}
                 className={`w-full text-left px-3 py-2 rounded-md text-sm flex items-center gap-2 transition-colors cursor-pointer ${
-                  page === n.key
+                  activePage === n.key
                     ? "bg-accent-500/20 text-accent-300"
                     : "text-surface-400 hover:bg-surface-700 hover:text-surface-300"
                 }`}
@@ -41,17 +44,12 @@ export default function App() {
           ))}
         </ul>
         <div className="px-4 py-3 border-t border-surface-700 text-xs text-surface-500">
-          v1.0.0
+          v2.0.0
         </div>
       </nav>
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto p-6">
-        {page === "ab" && <ABTestPanel />}
-        {page === "clt" && <CLTVisualizer />}
-        {page === "personas" && <PersonaScatter />}
-        {page === "experiments" && <ExperimentList />}
-      </main>
-    </>
+      <main className="flex-1 overflow-auto p-6">{children}</main>
+    </div>
   );
 }

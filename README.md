@@ -1,8 +1,141 @@
-# Advanced A/B Testing & User Segmentation Engine
+# A/B Testing & User Segmentation Engine
 
-![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue)
+![Python 3.12](https://img.shields.io/badge/python-3.12-blue)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.104%2B-green)
+![React](https://img.shields.io/badge/React-19-61dafb)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue)
 
-A complete statistical engine for A/B testing, Bayesian inference, regression analysis, and user segmentation — built from scratch using only NumPy and Matplotlib.
+An enterprise-grade full-stack A/B Testing & User Segmentation platform. The backend wraps a
+custom statistical math engine (NumPy/SciPy) in a production FastAPI microservice with
+PostgreSQL persistence and real-time WebSocket streaming. The frontend is a React TypeScript
+dashboard with Recharts visualisations and Zustand state management.
+
+---
+
+## Architecture
+
+```
+ab-testing-engine/
+├── backend/
+│   ├── main.py              ← FastAPI app (CORS, lifespan, all routers)
+│   ├── config.py            ← pydantic-settings (DATABASE_URL, CORS, etc.)
+│   ├── database.py          ← Async SQLAlchemy engine + session
+│   ├── models.py            ← ORM models (UUID PKs, SQLAlchemy 2.0)
+│   ├── cli.py               ← Legacy CLI entry point
+│   ├── requirements.txt
+│   ├── Dockerfile
+│   ├── api/
+│   │   ├── routes_ab_testing.py   ← POST /test/frequentist|bayesian|sample-size
+│   │   ├── routes_clustering.py   ← POST /clustering/personas|kmeans
+│   │   ├── routes_clt.py          ← POST /clt/demonstrate
+│   │   ├── routes_experiments.py  ← CRUD /experiments
+│   │   └── routes_websocket.py    ← WS /ws/v1/experiment-stream/{id}
+│   └── src/                 ← Math engine (Z-tests, Bayesian, K-Means, CLT)
+├── frontend/
+│   ├── src/
+│   │   ├── App.tsx
+│   │   ├── main.tsx
+│   │   ├── types/index.ts          ← TypeScript interfaces
+│   │   ├── api/client.ts           ← Axios + React Query setup
+│   │   ├── hooks/useWebSocket.ts   ← Reconnecting WebSocket hook
+│   │   ├── store/useAppStore.ts    ← Zustand global store
+│   │   └── components/
+│   │       ├── layout/AppLayout.tsx
+│   │       ├── ABTestPanel.tsx
+│   │       ├── CLTVisualizer.tsx
+│   │       ├── PersonaScatter.tsx
+│   │       └── ExperimentList.tsx
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── vite.config.ts
+│   └── Dockerfile
+├── docker-compose.yml
+├── .github/workflows/ci.yml
+└── tests/
+```
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Backend API | FastAPI, Uvicorn, Pydantic v2 |
+| Database | PostgreSQL 16 (async via asyncpg) |
+| ORM | SQLAlchemy 2.0 (async) |
+| Math Engine | NumPy, SciPy (custom implementations) |
+| Real-time | WebSockets |
+| Frontend | React 19, TypeScript 5, Vite 8 |
+| Styling | Tailwind CSS v4 |
+| Charts | Recharts |
+| State | Zustand |
+| HTTP Client | Axios + TanStack Query |
+| CI/CD | GitHub Actions |
+
+---
+
+## Running with Docker Compose
+
+```bash
+docker compose up --build
+```
+
+- API docs: http://localhost:8000/docs
+- React dashboard: http://localhost:80
+
+---
+
+## Running Locally
+
+### Backend
+
+```bash
+cd backend
+pip install -r requirements.txt
+
+# Start PostgreSQL, then:
+export DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/ab_testing
+uvicorn backend.main:app --reload
+```
+
+API available at `http://localhost:8000/docs`
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Dashboard available at `http://localhost:5173`
+
+---
+
+## API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/v1/test/frequentist` | Two-proportion Z-test |
+| POST | `/api/v1/test/bayesian` | Bayesian Beta-Binomial test |
+| POST | `/api/v1/test/sample-size` | Sample size calculator |
+| POST | `/api/v1/clt/demonstrate` | CLT simulation |
+| POST | `/api/v1/clustering/personas` | User persona discovery |
+| POST | `/api/v1/clustering/kmeans` | K-Means clustering |
+| GET/POST | `/api/v1/experiments` | Experiment CRUD |
+| WS | `/ws/v1/experiment-stream/{id}` | Real-time traffic stream |
+
+---
+
+## Running Tests
+
+```bash
+pip install -r backend/requirements.txt
+pytest tests/ -v
+```
+
+All 43 tests run against an in-memory SQLite database — no PostgreSQL required.
+
 
 ## Table of Contents
 
