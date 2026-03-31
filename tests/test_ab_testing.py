@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from src.unit3_hypothesis_testing.ab_test_engine import ABTestEngine
+from backend.src.unit3_hypothesis_testing.ab_test_engine import ABTestEngine
 
 
 def test_ztest_significant():
