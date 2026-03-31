@@ -23,7 +23,7 @@ class ExperimentCreate(BaseModel):
     description: Optional[str] = Field(None, max_length=2000)
     hypothesis: Optional[str] = Field(None, max_length=2000)
     baseline_rate: float = Field(0.0, ge=0, le=1)
-    min_detectable_effect: float = Field(0.0, ge=0)
+    min_detectable_effect: Optional[float] = Field(None, ge=0)
     confidence_level: float = Field(0.95, gt=0, lt=1)
     variants: list[VariantCreate] = Field(default_factory=list)
 

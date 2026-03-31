@@ -7,7 +7,7 @@ from sqlalchemy import (
     Boolean, DateTime, Enum, Float, ForeignKey, Index, Integer, JSON,
     String, Text,
 )
-from sqlalchemy.dialects.postgresql import UUID
+
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.database import Base
@@ -48,7 +48,7 @@ class Experiment(Base):
     __tablename__ = "experiments"
 
     id: Mapped[str] = mapped_column(
-        UUID(as_uuid=False), primary_key=True, default=_uuid
+        String(36), primary_key=True, default=_uuid
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
@@ -77,10 +77,10 @@ class Variant(Base):
     __table_args__ = (Index("ix_variants_experiment_id", "experiment_id"),)
 
     id: Mapped[str] = mapped_column(
-        UUID(as_uuid=False), primary_key=True, default=_uuid
+        String(36), primary_key=True, default=_uuid
     )
     experiment_id: Mapped[str] = mapped_column(
-        UUID(as_uuid=False), ForeignKey("experiments.id"), nullable=False
+        String(36), ForeignKey("experiments.id"), nullable=False
     )
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     is_control: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -102,10 +102,10 @@ class UserEvent(Base):
     __table_args__ = (Index("ix_user_events_variant_id", "variant_id"),)
 
     id: Mapped[str] = mapped_column(
-        UUID(as_uuid=False), primary_key=True, default=_uuid
+        String(36), primary_key=True, default=_uuid
     )
     variant_id: Mapped[str] = mapped_column(
-        UUID(as_uuid=False), ForeignKey("variants.id"), nullable=False
+        String(36), ForeignKey("variants.id"), nullable=False
     )
     user_identifier: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     event_type: Mapped[str] = mapped_column(
@@ -127,7 +127,7 @@ class ClusterPersona(Base):
     __tablename__ = "cluster_personas"
 
     id: Mapped[str] = mapped_column(
-        UUID(as_uuid=False), primary_key=True, default=_uuid
+        String(36), primary_key=True, default=_uuid
     )
     run_id: Mapped[str] = mapped_column(String(100), nullable=False)
     cluster_id: Mapped[int] = mapped_column(Integer, nullable=False)
