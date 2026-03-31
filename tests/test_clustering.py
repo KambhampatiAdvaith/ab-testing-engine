@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from src.unit5_clustering.kmeans import KMeans
+from backend.src.unit5_clustering.kmeans import KMeans
 
 
 def test_kmeans_convergence():

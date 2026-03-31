@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
-from src.unit4_regression.linear_regression import MultipleLinearRegression
-from src.unit4_regression.hypothesis_tests import t_test_coefficients, f_test_overall
+from backend.src.unit4_regression.linear_regression import MultipleLinearRegression
+from backend.src.unit4_regression.hypothesis_tests import t_test_coefficients, f_test_overall
 
 
 def test_regression_simple():

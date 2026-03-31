@@ -21,11 +21,11 @@ def run_unit1() -> None:
     print("UNIT 1-2: Random Variables & CLT Demonstration")
     print("=" * 60)
 
-    from src.unit1_2_random_variables.distributions import (
+    from backend.src.unit1_2_random_variables.distributions import (
         BinomialDistribution, NormalDistribution, UniformDistribution
     )
-    from src.unit1_2_random_variables.traffic_simulator import simulate_traffic
-    from src.unit1_2_random_variables.clt_visualizer import demonstrate_clt
+    from backend.src.unit1_2_random_variables.traffic_simulator import simulate_traffic
+    from backend.src.unit1_2_random_variables.clt_visualizer import demonstrate_clt
 
     binom = BinomialDistribution(n=10, p=0.3)
     print(f"\nBinomial(n=10, p=0.3):")
@@ -54,9 +54,9 @@ def run_unit3() -> None:
     print("UNIT 3: A/B Testing & Bayesian Estimation")
     print("=" * 60)
 
-    from src.unit3_hypothesis_testing.ab_test_engine import ABTestEngine
-    from src.unit3_hypothesis_testing.bayesian_estimation import BayesianABTest
-    from src.utils.data_generator import generate_conversion_data
+    from backend.src.unit3_hypothesis_testing.ab_test_engine import ABTestEngine
+    from backend.src.unit3_hypothesis_testing.bayesian_estimation import BayesianABTest
+    from backend.src.utils.data_generator import generate_conversion_data
 
     engine = ABTestEngine()
     control, variant = generate_conversion_data(
@@ -104,9 +104,9 @@ def run_unit4() -> None:
     print("UNIT 4: Multiple Linear Regression")
     print("=" * 60)
 
-    from src.unit4_regression.linear_regression import MultipleLinearRegression
-    from src.unit4_regression.hypothesis_tests import f_test_overall
-    from src.unit4_regression.lifetime_value import generate_ltv_dataset, analyze_feature_importance
+    from backend.src.unit4_regression.linear_regression import MultipleLinearRegression
+    from backend.src.unit4_regression.hypothesis_tests import f_test_overall
+    from backend.src.unit4_regression.lifetime_value import generate_ltv_dataset, analyze_feature_importance
 
     X, y, feature_names = generate_ltv_dataset(n_users=500)
 
@@ -131,8 +131,8 @@ def run_unit5() -> None:
     print("UNIT 5: K-Means Clustering & User Personas")
     print("=" * 60)
 
-    from src.unit5_clustering.kmeans import KMeans
-    from src.unit5_clustering.user_personas import (
+    from backend.src.unit5_clustering.kmeans import KMeans
+    from backend.src.unit5_clustering.user_personas import (
         generate_user_behavior_data, discover_personas,
         analyze_personas, visualize_personas
     )

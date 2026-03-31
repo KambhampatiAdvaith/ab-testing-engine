@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from src.unit1_2_random_variables.distributions import BinomialDistribution, NormalDistribution, UniformDistribution
+from backend.src.unit1_2_random_variables.distributions import BinomialDistribution, NormalDistribution, UniformDistribution
 
 
 def test_binomial_pmf():

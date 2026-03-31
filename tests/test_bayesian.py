@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from src.unit3_hypothesis_testing.bayesian_estimation import BayesianABTest
+from backend.src.unit3_hypothesis_testing.bayesian_estimation import BayesianABTest
 
 
 def test_bayesian_update():
