@@ -112,10 +112,12 @@ export default function ABTestPanel() {
   const onChangeBayes = (e) =>
     setBayesForm((s) => ({ ...s, [e.target.name]: e.target.value }));
 
+  const probBBeatsA = bayesResult?.probability_b_beats_a ?? 0;
+
   const probBarData = bayesResult
     ? [
-        { name: "P(B > A)", value: bayesResult.prob_b_better ?? bayesResult.probability_b_better ?? 0 },
-        { name: "P(A ≥ B)", value: 1 - (bayesResult.prob_b_better ?? bayesResult.probability_b_better ?? 0) },
+        { name: "P(B > A)", value: probBBeatsA },
+        { name: "P(A ≥ B)", value: 1 - probBBeatsA },
       ]
     : [];
 
@@ -156,7 +158,7 @@ export default function ABTestPanel() {
         {freqResult && (
           <table className="mt-4 w-full">
             <tbody>
-              <ResultRow label="Z-Statistic" value={freqResult.z_stat?.toFixed(4)} />
+              <ResultRow label="Z-Statistic" value={freqResult.z_statistic?.toFixed(4)} />
               <ResultRow label="P-Value" value={freqResult.p_value?.toFixed(6)} />
               <ResultRow
                 label="Confidence Interval"
@@ -171,15 +173,18 @@ export default function ABTestPanel() {
                 value={
                   <span
                     className={
-                      freqResult.significant
+                      freqResult.is_significant
                         ? "text-success-400"
                         : "text-warning-400"
                     }
                   >
-                    {freqResult.significant ? "Yes ✓" : "No ✗"}
+                    {freqResult.is_significant ? "Yes ✓" : "No ✗"}
                   </span>
                 }
               />
+              <ResultRow label="Control Rate" value={freqResult.control_rate?.toFixed(4)} />
+              <ResultRow label="Variant Rate" value={freqResult.variant_rate?.toFixed(4)} />
+              <ResultRow label="Relative Uplift" value={`${(freqResult.relative_uplift * 100)?.toFixed(2)}%`} />
             </tbody>
           </table>
         )}
@@ -220,8 +225,13 @@ export default function ABTestPanel() {
             <p className="text-sm text-surface-300">
               P(B {">"} A):{" "}
               <span className="font-mono text-accent-300">
-                {((bayesResult.prob_b_better ?? bayesResult.probability_b_better) * 100).toFixed(2)}%
+                {(probBBeatsA * 100).toFixed(2)}%
               </span>
+              {bayesResult.recommendation && (
+                <span className="ml-3 text-xs text-surface-400">
+                  Recommendation: {bayesResult.recommendation}
+                </span>
+              )}
             </p>
             <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">

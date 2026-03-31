@@ -48,12 +48,12 @@ export default function PersonaScatter() {
   const clusters = {};
   if (result?.users) {
     for (const u of result.users) {
-      const c = u.cluster ?? u.persona ?? 0;
+      const c = u.cluster ?? 0;
       if (!clusters[c]) clusters[c] = [];
       clusters[c].push({
-        x: u.session_duration ?? u.feature1 ?? u.x ?? 0,
-        y: u.pages_viewed ?? u.feature2 ?? u.y ?? 0,
-        name: u.user_id ?? u.id,
+        x: u.avg_session_duration ?? 0,
+        y: u.pages_per_session ?? 0,
+        name: `User`,
       });
     }
   }
@@ -61,6 +61,11 @@ export default function PersonaScatter() {
   const clusterKeys = Object.keys(clusters).sort(
     (a, b) => Number(a) - Number(b)
   );
+
+  // Convert personas dict to list for table rendering
+  const personaList = result?.personas
+    ? Object.entries(result.personas).map(([id, p]) => ({ id, ...p }))
+    : [];
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -154,7 +159,7 @@ export default function PersonaScatter() {
         </section>
       )}
 
-      {result?.personas && (
+      {personaList.length > 0 && (
         <section className="bg-surface-800 rounded-lg border border-surface-700 p-5">
           <h3 className="text-sm font-medium text-surface-300 mb-3">
             Persona Analysis
@@ -165,32 +170,20 @@ export default function PersonaScatter() {
                 <tr className="border-b border-surface-700 text-surface-400">
                   <th className="text-left py-2 pr-4 font-medium">Persona</th>
                   <th className="text-left py-2 pr-4 font-medium">Size</th>
-                  <th className="text-left py-2 pr-4 font-medium">
-                    Avg Session Duration
-                  </th>
-                  <th className="text-left py-2 font-medium">
-                    Avg Pages Viewed
-                  </th>
+                  <th className="text-left py-2 font-medium">Label</th>
                 </tr>
               </thead>
               <tbody>
-                {result.personas.map((p, i) => (
-                  <tr key={i} className="border-b border-surface-700/50">
+                {personaList.map((p) => (
+                  <tr key={p.id} className="border-b border-surface-700/50">
                     <td className="py-2 pr-4 font-mono text-accent-300">
-                      {p.name ?? `Cluster ${p.cluster ?? i}`}
+                      Cluster {p.id}
                     </td>
                     <td className="py-2 pr-4 font-mono text-surface-300">
-                      {p.size ?? p.count ?? "—"}
-                    </td>
-                    <td className="py-2 pr-4 font-mono text-surface-300">
-                      {p.avg_session_duration?.toFixed(1) ??
-                        p.centroid?.[0]?.toFixed(1) ??
-                        "—"}
+                      {p.size ?? "—"}
                     </td>
                     <td className="py-2 font-mono text-surface-300">
-                      {p.avg_pages_viewed?.toFixed(1) ??
-                        p.centroid?.[1]?.toFixed(1) ??
-                        "—"}
+                      {p.label ?? "—"}
                     </td>
                   </tr>
                 ))}
@@ -200,7 +193,7 @@ export default function PersonaScatter() {
         </section>
       )}
 
-      {result && clusterKeys.length === 0 && !result.personas && (
+      {result && clusterKeys.length === 0 && personaList.length === 0 && (
         <p className="text-sm text-surface-500">
           No cluster data returned. Check backend response format.
         </p>

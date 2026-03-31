@@ -66,13 +66,19 @@ export default function CLTVisualizer() {
     }));
   };
 
-  const sampleSizeKeys = result
-    ? Object.keys(result.results || result).filter((k) => k !== "message")
-    : [];
+  // Transform API results (list) into a map keyed by sample_size
+  const resultsMap = {};
+  if (result?.results) {
+    for (const entry of result.results) {
+      resultsMap[entry.sample_size] = entry;
+    }
+  }
+
+  const sampleSizeKeys = Object.keys(resultsMap);
 
   const activeMeans =
-    result && activeSize != null
-      ? (result.results || result)[String(activeSize)]?.sample_means || []
+    activeSize != null && resultsMap[activeSize]
+      ? resultsMap[activeSize].sample_means || []
       : [];
 
   const chartData = buildHistogram(activeMeans);
@@ -208,7 +214,7 @@ export default function CLTVisualizer() {
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {sampleSizeKeys.map((key) => {
-              const entry = (result.results || result)[key] || {};
+              const entry = resultsMap[key] || {};
               return (
                 <div
                   key={key}
@@ -216,10 +222,10 @@ export default function CLTVisualizer() {
                 >
                   <p className="text-xs text-surface-500 mb-1">n = {key}</p>
                   <p className="text-sm font-mono text-surface-300">
-                    μ = {entry.mean_of_means?.toFixed(4) ?? "—"}
+                    μ = {entry.empirical_mean?.toFixed(4) ?? "—"}
                   </p>
                   <p className="text-sm font-mono text-surface-300">
-                    σ = {entry.std_of_means?.toFixed(4) ?? "—"}
+                    σ = {entry.empirical_std?.toFixed(4) ?? "—"}
                   </p>
                 </div>
               );
