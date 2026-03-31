@@ -7,24 +7,53 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { demonstrateCLT } from "../api";
+import { demonstrateCLT } from "../api/client";
+import type { CLTResponse } from "../types";
+import type { AxiosError } from "axios";
 
-const DISTRIBUTIONS = ["normal", "exponential", "uniform", "binomial"];
+const DISTRIBUTIONS = ["normal", "exponential", "uniform", "binomial"] as const;
 const DEFAULT_SAMPLE_SIZES = "5,20,50,100";
 const COLORS = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#818cf8"];
 
+function getErrorMessage(err: unknown): string {
+  const axiosErr = err as AxiosError<{ detail: string }>;
+  return axiosErr.response?.data?.detail ?? (err instanceof Error ? err.message : String(err));
+}
+
+interface HistogramBin {
+  bin: string;
+  count: number;
+}
+
+function buildHistogram(means: number[]): HistogramBin[] {
+  if (!means || means.length === 0) return [];
+  const min = Math.min(...means);
+  const max = Math.max(...means);
+  const bins = 30;
+  const width = (max - min) / bins || 1;
+  const counts = Array<number>(bins).fill(0);
+  for (const m of means) {
+    const idx = Math.min(Math.floor((m - min) / width), bins - 1);
+    counts[idx]++;
+  }
+  return counts.map((count, i) => ({
+    bin: (min + (i + 0.5) * width).toFixed(2),
+    count,
+  }));
+}
+
 export default function CLTVisualizer() {
   const [form, setForm] = useState({
-    distribution: "exponential",
+    distribution: "exponential" as (typeof DISTRIBUTIONS)[number],
     sample_sizes: DEFAULT_SAMPLE_SIZES,
     n_simulations: 1000,
   });
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState<CLTResponse | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [activeSize, setActiveSize] = useState(null);
+  const [error, setError] = useState<string | null>(null);
+  const [activeSize, setActiveSize] = useState<string | null>(null);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
@@ -40,45 +69,25 @@ export default function CLTVisualizer() {
       };
       const res = await demonstrateCLT(payload);
       setResult(res);
-      const sampleSizes = payload.sample_sizes;
-      setActiveSize(sampleSizes[0]);
+      setActiveSize(String(payload.sample_sizes[0]));
     } catch (err) {
-      setError(err.response?.data?.detail || err.message);
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
   };
 
-  const buildHistogram = (means) => {
-    if (!means || means.length === 0) return [];
-    const min = Math.min(...means);
-    const max = Math.max(...means);
-    const bins = 30;
-    const width = (max - min) / bins || 1;
-    const counts = Array(bins).fill(0);
-    for (const m of means) {
-      const idx = Math.min(Math.floor((m - min) / width), bins - 1);
-      counts[idx]++;
-    }
-    return counts.map((count, i) => ({
-      bin: (min + (i + 0.5) * width).toFixed(2),
-      count,
-    }));
-  };
-
-  // Transform API results (list) into a map keyed by sample_size
-  const resultsMap = {};
+  const resultsMap: Record<string, CLTResponse["results"][number]> = {};
   if (result?.results) {
     for (const entry of result.results) {
-      resultsMap[entry.sample_size] = entry;
+      resultsMap[String(entry.sample_size)] = entry;
     }
   }
-
   const sampleSizeKeys = Object.keys(resultsMap);
 
   const activeMeans =
     activeSize != null && resultsMap[activeSize]
-      ? resultsMap[activeSize].sample_means || []
+      ? resultsMap[activeSize].sample_means ?? []
       : [];
 
   const chartData = buildHistogram(activeMeans);
@@ -96,7 +105,10 @@ export default function CLTVisualizer() {
             <select
               value={form.distribution}
               onChange={(e) =>
-                setForm((s) => ({ ...s, distribution: e.target.value }))
+                setForm((s) => ({
+                  ...s,
+                  distribution: e.target.value as (typeof DISTRIBUTIONS)[number],
+                }))
               }
               className="mt-1 block w-full rounded-md bg-surface-900 border border-surface-700 px-3 py-1.5 text-sm text-surface-300 focus:outline-none focus:border-accent-500"
             >
@@ -128,7 +140,7 @@ export default function CLTVisualizer() {
               type="number"
               value={form.n_simulations}
               onChange={(e) =>
-                setForm((s) => ({ ...s, n_simulations: e.target.value }))
+                setForm((s) => ({ ...s, n_simulations: Number(e.target.value) }))
               }
               className="mt-1 block w-full rounded-md bg-surface-900 border border-surface-700 px-3 py-1.5 text-sm text-surface-300 focus:outline-none focus:border-accent-500"
             />
@@ -147,6 +159,12 @@ export default function CLTVisualizer() {
 
         {error && <p className="mt-3 text-sm text-danger-400">{error}</p>}
       </section>
+
+      {loading && !result && (
+        <section className="bg-surface-800 rounded-lg border border-surface-700 p-5">
+          <div className="h-72 bg-surface-700 rounded animate-pulse" />
+        </section>
+      )}
 
       {result && sampleSizeKeys.length > 0 && (
         <section className="bg-surface-800 rounded-lg border border-surface-700 p-5 space-y-4">
@@ -199,8 +217,7 @@ export default function CLTVisualizer() {
                     dataKey="count"
                     fill={
                       COLORS[
-                        sampleSizeKeys.indexOf(String(activeSize)) %
-                          COLORS.length
+                        sampleSizeKeys.indexOf(String(activeSize)) % COLORS.length
                       ]
                     }
                     radius={[2, 2, 0, 0]}
@@ -214,18 +231,15 @@ export default function CLTVisualizer() {
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {sampleSizeKeys.map((key) => {
-              const entry = resultsMap[key] || {};
+              const entry = resultsMap[key];
               return (
-                <div
-                  key={key}
-                  className="bg-surface-900 rounded-md p-3 text-center"
-                >
+                <div key={key} className="bg-surface-900 rounded-md p-3 text-center">
                   <p className="text-xs text-surface-500 mb-1">n = {key}</p>
                   <p className="text-sm font-mono text-surface-300">
-                    μ = {entry.empirical_mean?.toFixed(4) ?? "—"}
+                    μ = {entry?.empirical_mean?.toFixed(4) ?? "—"}
                   </p>
                   <p className="text-sm font-mono text-surface-300">
-                    σ = {entry.empirical_std?.toFixed(4) ?? "—"}
+                    σ = {entry?.empirical_std?.toFixed(4) ?? "—"}
                   </p>
                 </div>
               );

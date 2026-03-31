@@ -1,23 +1,39 @@
 import { useState, useEffect } from "react";
-import { createExperiment, listExperiments } from "../api";
+import { createExperiment, listExperiments } from "../api/client";
+import type { Experiment } from "../types";
+import type { AxiosError } from "axios";
+
+function getErrorMessage(err: unknown): string {
+  const axiosErr = err as AxiosError<{ detail: string }>;
+  return axiosErr.response?.data?.detail ?? (err instanceof Error ? err.message : String(err));
+}
+
+interface ExperimentForm {
+  name: string;
+  description: string;
+  hypothesis: string;
+  baseline_rate: number;
+}
+
+const EMPTY_FORM: ExperimentForm = {
+  name: "",
+  description: "",
+  hypothesis: "",
+  baseline_rate: 0.1,
+};
 
 export default function ExperimentList() {
-  const [experiments, setExperiments] = useState([]);
-  const [form, setForm] = useState({
-    name: "",
-    description: "",
-    hypothesis: "",
-    baseline_rate: 0.1,
-  });
+  const [experiments, setExperiments] = useState<Experiment[]>([]);
+  const [form, setForm] = useState<ExperimentForm>(EMPTY_FORM);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchExperiments = async () => {
     setFetching(true);
     try {
       const data = await listExperiments();
-      setExperiments(Array.isArray(data) ? data : data.experiments ?? []);
+      setExperiments(Array.isArray(data) ? data : []);
     } catch {
       // silently handle – list may fail if backend is down
     } finally {
@@ -26,22 +42,26 @@ export default function ExperimentList() {
   };
 
   useEffect(() => {
-    fetchExperiments();
+    void fetchExperiments();
   }, []);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
     try {
       await createExperiment({
-        ...form,
+        name: form.name,
+        description: form.description,
+        hypothesis: form.hypothesis,
         baseline_rate: Number(form.baseline_rate),
+        min_detectable_effect: null,
+        confidence_level: 0.95,
       });
-      setForm({ name: "", description: "", hypothesis: "", baseline_rate: 0.1 });
-      fetchExperiments();
+      setForm(EMPTY_FORM);
+      void fetchExperiments();
     } catch (err) {
-      setError(err.response?.data?.detail || err.message);
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -53,9 +73,7 @@ export default function ExperimentList() {
 
       {/* Create form */}
       <section className="bg-surface-800 rounded-lg border border-surface-700 p-5">
-        <h3 className="text-sm font-medium text-surface-300 mb-4">
-          New Experiment
-        </h3>
+        <h3 className="text-sm font-medium text-surface-300 mb-4">New Experiment</h3>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <label className="block">
@@ -63,9 +81,7 @@ export default function ExperimentList() {
               <input
                 type="text"
                 value={form.name}
-                onChange={(e) =>
-                  setForm((s) => ({ ...s, name: e.target.value }))
-                }
+                onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))}
                 required
                 className="mt-1 block w-full rounded-md bg-surface-900 border border-surface-700 px-3 py-1.5 text-sm text-surface-300 focus:outline-none focus:border-accent-500"
               />
@@ -77,7 +93,7 @@ export default function ExperimentList() {
                 step="any"
                 value={form.baseline_rate}
                 onChange={(e) =>
-                  setForm((s) => ({ ...s, baseline_rate: e.target.value }))
+                  setForm((s) => ({ ...s, baseline_rate: Number(e.target.value) }))
                 }
                 className="mt-1 block w-full rounded-md bg-surface-900 border border-surface-700 px-3 py-1.5 text-sm text-surface-300 focus:outline-none focus:border-accent-500"
               />
@@ -89,9 +105,7 @@ export default function ExperimentList() {
             <input
               type="text"
               value={form.hypothesis}
-              onChange={(e) =>
-                setForm((s) => ({ ...s, hypothesis: e.target.value }))
-              }
+              onChange={(e) => setForm((s) => ({ ...s, hypothesis: e.target.value }))}
               className="mt-1 block w-full rounded-md bg-surface-900 border border-surface-700 px-3 py-1.5 text-sm text-surface-300 focus:outline-none focus:border-accent-500"
             />
           </label>
@@ -100,9 +114,7 @@ export default function ExperimentList() {
             <span className="text-xs text-surface-400">Description</span>
             <textarea
               value={form.description}
-              onChange={(e) =>
-                setForm((s) => ({ ...s, description: e.target.value }))
-              }
+              onChange={(e) => setForm((s) => ({ ...s, description: e.target.value }))}
               rows={2}
               className="mt-1 block w-full rounded-md bg-surface-900 border border-surface-700 px-3 py-1.5 text-sm text-surface-300 focus:outline-none focus:border-accent-500 resize-none"
             />
@@ -123,11 +135,9 @@ export default function ExperimentList() {
       {/* List */}
       <section className="bg-surface-800 rounded-lg border border-surface-700 p-5">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-medium text-surface-300">
-            Existing Experiments
-          </h3>
+          <h3 className="text-sm font-medium text-surface-300">Existing Experiments</h3>
           <button
-            onClick={fetchExperiments}
+            onClick={() => void fetchExperiments()}
             disabled={fetching}
             className="text-xs text-accent-400 hover:text-accent-300 disabled:opacity-50 cursor-pointer"
           >
@@ -148,13 +158,9 @@ export default function ExperimentList() {
               >
                 <div className="flex items-start justify-between">
                   <div>
-                    <h4 className="text-sm font-medium text-surface-300">
-                      {exp.name}
-                    </h4>
+                    <h4 className="text-sm font-medium text-surface-300">{exp.name}</h4>
                     {exp.hypothesis && (
-                      <p className="text-xs text-surface-500 mt-1">
-                        {exp.hypothesis}
-                      </p>
+                      <p className="text-xs text-surface-500 mt-1">{exp.hypothesis}</p>
                     )}
                   </div>
                   {exp.baseline_rate != null && (
@@ -164,9 +170,7 @@ export default function ExperimentList() {
                   )}
                 </div>
                 {exp.description && (
-                  <p className="text-xs text-surface-400 mt-2">
-                    {exp.description}
-                  </p>
+                  <p className="text-xs text-surface-400 mt-2">{exp.description}</p>
                 )}
               </div>
             ))}

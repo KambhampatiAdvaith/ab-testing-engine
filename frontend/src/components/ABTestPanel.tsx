@@ -8,29 +8,42 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import { runFrequentist, runBayesian } from "../api";
+import { runFrequentist, runBayesian } from "../api/client";
+import type { FrequentistResponse, BayesianResponse } from "../types";
+import type { AxiosError } from "axios";
 
-const field = (label, name, defaultVal) => ({ label, name, defaultVal });
+interface FieldDef {
+  label: string;
+  name: string;
+  defaultVal: number;
+}
 
-const FREQ_FIELDS = [
-  field("Control Clicks", "control_clicks", 120),
-  field("Control Total", "control_total", 1000),
-  field("Variant Clicks", "variant_clicks", 145),
-  field("Variant Total", "variant_total", 1000),
-  field("Alpha (α)", "alpha", 0.05),
+const FREQ_FIELDS: FieldDef[] = [
+  { label: "Control Clicks", name: "control_clicks", defaultVal: 120 },
+  { label: "Control Total", name: "control_total", defaultVal: 1000 },
+  { label: "Variant Clicks", name: "variant_clicks", defaultVal: 145 },
+  { label: "Variant Total", name: "variant_total", defaultVal: 1000 },
+  { label: "Alpha (α)", name: "alpha", defaultVal: 0.05 },
 ];
 
-const BAYES_FIELDS = [
-  field("Control Successes", "control_successes", 120),
-  field("Control Failures", "control_failures", 880),
-  field("Variant Successes", "variant_successes", 145),
-  field("Variant Failures", "variant_failures", 855),
-  field("Prior α", "prior_alpha", 1),
-  field("Prior β", "prior_beta", 1),
-  field("Simulations", "n_simulations", 10000),
+const BAYES_FIELDS: FieldDef[] = [
+  { label: "Control Successes", name: "control_successes", defaultVal: 120 },
+  { label: "Control Failures", name: "control_failures", defaultVal: 880 },
+  { label: "Variant Successes", name: "variant_successes", defaultVal: 145 },
+  { label: "Variant Failures", name: "variant_failures", defaultVal: 855 },
+  { label: "Prior α", name: "prior_alpha", defaultVal: 1 },
+  { label: "Prior β", name: "prior_beta", defaultVal: 1 },
+  { label: "Simulations", name: "n_simulations", defaultVal: 10000 },
 ];
 
-function InputField({ label, name, value, onChange }) {
+interface InputFieldProps {
+  label: string;
+  name: string;
+  value: number | string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}
+
+function InputField({ label, name, value, onChange }: InputFieldProps) {
   return (
     <label className="block">
       <span className="text-xs text-surface-400">{label}</span>
@@ -46,7 +59,12 @@ function InputField({ label, name, value, onChange }) {
   );
 }
 
-function ResultRow({ label, value }) {
+interface ResultRowProps {
+  label: string;
+  value: React.ReactNode;
+}
+
+function ResultRow({ label, value }: ResultRowProps) {
   return (
     <tr className="border-b border-surface-700/50">
       <td className="py-2 pr-4 text-sm text-surface-400">{label}</td>
@@ -55,65 +73,64 @@ function ResultRow({ label, value }) {
   );
 }
 
+function getErrorMessage(err: unknown): string {
+  const axiosErr = err as AxiosError<{ detail: string }>;
+  return axiosErr.response?.data?.detail ?? (err instanceof Error ? err.message : String(err));
+}
+
 export default function ABTestPanel() {
-  const [freqForm, setFreqForm] = useState(
+  const [freqForm, setFreqForm] = useState<Record<string, number | string>>(
     Object.fromEntries(FREQ_FIELDS.map((f) => [f.name, f.defaultVal]))
   );
-  const [bayesForm, setBayesForm] = useState(
+  const [bayesForm, setBayesForm] = useState<Record<string, number | string>>(
     Object.fromEntries(BAYES_FIELDS.map((f) => [f.name, f.defaultVal]))
   );
-  const [freqResult, setFreqResult] = useState(null);
-  const [bayesResult, setBayesResult] = useState(null);
+  const [freqResult, setFreqResult] = useState<FrequentistResponse | null>(null);
+  const [bayesResult, setBayesResult] = useState<BayesianResponse | null>(null);
   const [loading, setLoading] = useState({ freq: false, bayes: false });
-  const [error, setError] = useState({ freq: null, bayes: null });
+  const [error, setError] = useState<{ freq: string | null; bayes: string | null }>({
+    freq: null,
+    bayes: null,
+  });
 
-  const handleFreq = async (e) => {
+  const handleFreq = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading((s) => ({ ...s, freq: true }));
     setError((s) => ({ ...s, freq: null }));
     try {
       const parsed = Object.fromEntries(
         Object.entries(freqForm).map(([k, v]) => [k, Number(v)])
-      );
-      const res = await runFrequentist(parsed);
-      setFreqResult(res);
+      ) as unknown as Parameters<typeof runFrequentist>[0];
+      setFreqResult(await runFrequentist(parsed));
     } catch (err) {
-      setError((s) => ({
-        ...s,
-        freq: err.response?.data?.detail || err.message,
-      }));
+      setError((s) => ({ ...s, freq: getErrorMessage(err) }));
     } finally {
       setLoading((s) => ({ ...s, freq: false }));
     }
   };
 
-  const handleBayes = async (e) => {
+  const handleBayes = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading((s) => ({ ...s, bayes: true }));
     setError((s) => ({ ...s, bayes: null }));
     try {
       const parsed = Object.fromEntries(
         Object.entries(bayesForm).map(([k, v]) => [k, Number(v)])
-      );
-      const res = await runBayesian(parsed);
-      setBayesResult(res);
+      ) as unknown as Parameters<typeof runBayesian>[0];
+      setBayesResult(await runBayesian(parsed));
     } catch (err) {
-      setError((s) => ({
-        ...s,
-        bayes: err.response?.data?.detail || err.message,
-      }));
+      setError((s) => ({ ...s, bayes: getErrorMessage(err) }));
     } finally {
       setLoading((s) => ({ ...s, bayes: false }));
     }
   };
 
-  const onChangeFreq = (e) =>
+  const onChangeFreq = (e: React.ChangeEvent<HTMLInputElement>) =>
     setFreqForm((s) => ({ ...s, [e.target.name]: e.target.value }));
-  const onChangeBayes = (e) =>
+  const onChangeBayes = (e: React.ChangeEvent<HTMLInputElement>) =>
     setBayesForm((s) => ({ ...s, [e.target.name]: e.target.value }));
 
   const probBBeatsA = bayesResult?.probability_b_beats_a ?? 0;
-
   const probBarData = bayesResult
     ? [
         { name: "P(B > A)", value: probBBeatsA },
@@ -155,6 +172,14 @@ export default function ABTestPanel() {
           <p className="mt-3 text-sm text-danger-400">{error.freq}</p>
         )}
 
+        {loading.freq && !freqResult && (
+          <div className="mt-4 space-y-2 animate-pulse">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-8 bg-surface-700 rounded" />
+            ))}
+          </div>
+        )}
+
         {freqResult && (
           <table className="mt-4 w-full">
             <tbody>
@@ -162,29 +187,22 @@ export default function ABTestPanel() {
               <ResultRow label="P-Value" value={freqResult.p_value?.toFixed(6)} />
               <ResultRow
                 label="Confidence Interval"
-                value={
-                  freqResult.confidence_interval
-                    ? `[${freqResult.confidence_interval[0]?.toFixed(4)}, ${freqResult.confidence_interval[1]?.toFixed(4)}]`
-                    : "—"
-                }
+                value={`[${freqResult.confidence_interval[0]?.toFixed(4)}, ${freqResult.confidence_interval[1]?.toFixed(4)}]`}
               />
               <ResultRow
                 label="Significant"
                 value={
-                  <span
-                    className={
-                      freqResult.is_significant
-                        ? "text-success-400"
-                        : "text-warning-400"
-                    }
-                  >
+                  <span className={freqResult.is_significant ? "text-green-400" : "text-yellow-400"}>
                     {freqResult.is_significant ? "Yes ✓" : "No ✗"}
                   </span>
                 }
               />
               <ResultRow label="Control Rate" value={freqResult.control_rate?.toFixed(4)} />
               <ResultRow label="Variant Rate" value={freqResult.variant_rate?.toFixed(4)} />
-              <ResultRow label="Relative Uplift" value={`${(freqResult.relative_uplift * 100)?.toFixed(2)}%`} />
+              <ResultRow
+                label="Relative Uplift"
+                value={`${(freqResult.relative_uplift * 100)?.toFixed(2)}%`}
+              />
             </tbody>
           </table>
         )}
@@ -220,10 +238,14 @@ export default function ABTestPanel() {
           <p className="mt-3 text-sm text-danger-400">{error.bayes}</p>
         )}
 
+        {loading.bayes && !bayesResult && (
+          <div className="mt-4 h-48 bg-surface-700 rounded animate-pulse" />
+        )}
+
         {bayesResult && (
           <div className="mt-4 space-y-4">
             <p className="text-sm text-surface-300">
-              P(B {">"} A):{" "}
+              P(B &gt; A):{" "}
               <span className="font-mono text-accent-300">
                 {(probBBeatsA * 100).toFixed(2)}%
               </span>
@@ -255,14 +277,11 @@ export default function ABTestPanel() {
                       borderRadius: 6,
                       color: "#cbd5e1",
                     }}
-                    formatter={(v) => (v * 100).toFixed(2) + "%"}
+                    formatter={(v) => `${((v as number) * 100).toFixed(2)}%`}
                   />
                   <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                     {probBarData.map((_, i) => (
-                      <Cell
-                        key={i}
-                        fill={i === 0 ? "#6366f1" : "#475569"}
-                      />
+                      <Cell key={i} fill={i === 0 ? "#6366f1" : "#475569"} />
                     ))}
                   </Bar>
                 </BarChart>
